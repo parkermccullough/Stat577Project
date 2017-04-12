@@ -14,13 +14,12 @@ output: html_notebook
 
 ```{r}
 # Preliminaries
-
+# Data was preprocessed using python with Pandas library, see code/XXX.py
 # Load the data from CSV files, Change to absolute path of data
-cust = read.csv("~/Google Drive/UT Work/STAT 577/Assignments/Project/data/transaction_data.csv") 
+cust = read.csv("~/Google Drive/UT Work/STAT 577/Assignments/Project/code/data/transaction_data.csv") 
 
 head(cust)
 summary(cust)
-max(cust$SALES_VALUE)
 ```
 
 
