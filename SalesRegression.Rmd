@@ -20,6 +20,7 @@ cust = read.csv("~/Google Drive/UT Work/STAT 577/Assignments/Project/data/transa
 
 head(cust)
 summary(cust)
+max(cust$SALES_VALUE)
 ```
 
 
