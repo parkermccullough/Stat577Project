@@ -14,12 +14,12 @@ output: html_notebook
 
 ```{r}
 # Preliminaries
-# Data was preprocessed using python with Pandas library, see code/XXX.py
+# Data was preprocessed using python with Pandas library, see source/XXX.py
 # Load the data from CSV files, Change to absolute path of data
-cust = read.csv("~/Google Drive/UT Work/STAT 577/Assignments/Project/code/data/transaction_data.csv") 
+df = read.csv("~/Google Drive/UT Work/STAT 577/Assignments/Project/source/data/DF.csv") 
 
-head(cust)
-summary(cust)
+head(df)
+summary(df)
 ```
 
 
