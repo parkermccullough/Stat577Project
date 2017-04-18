@@ -14,12 +14,27 @@ output: html_notebook
 
 ```{r}
 # Preliminaries
-# Data was preprocessed using python with Pandas library, see source/XXX.py
+# Data was preprocessed using python with Pandas library, see code/.py
 # Load the data from CSV files, Change to absolute path of data
-df = read.csv("~/Google Drive/UT Work/STAT 577/Assignments/Project/source/data/DF.csv") 
+setwd("/Users/roshanak/Dropbox/UTK/Fall2016/STAT576/HW3/Journey/Journey_CSV")
+cust = read.csv(file="transaction_data.csv", header=TRUE)
+demo = read.csv(file="demo_ToCategorical.csv", header=TRUE)
 
-head(df)
-summary(df)
+head(cust)
+summary(cust)
+
+stmt <- "SELECT household_key,DAY,STORE_ID,RETAIL_DISC,TRANS_TIME,WEEK_NO,COUPON_DISC,
+COUPON_MATCH_DISC,
+sum(SALES_VALUE) AS TotalValue
+FROM cust
+GROUP BY household_key"
+trans1 <- sqldf(stmt)
+
+DF = merge(demo, trans1, ,by="household_key")
+DF$TRANS_TIME_Cat <- cut(DF$TRANS_TIME,
+                     breaks=c(56, 1200, 1201, 2354),
+                     labels=c("morning","afternoon","evening"))
+write.csv(DF,file="DF.csv")
 ```
 
 
