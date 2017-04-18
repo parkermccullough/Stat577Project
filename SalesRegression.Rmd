@@ -12,11 +12,13 @@ output: html_notebook
 ## Varisara Tansakul
 ### 20 April 2017
 
+## Data Loading Preliminaries
+
 ```{r}
 # Preliminaries
 # Data was preprocessed using python with Pandas library, see code/.py
 # Load the data from CSV files, Change to absolute path of data
-setwd("/Users/roshanak/Dropbox/UTK/Fall2016/STAT576/HW3/Journey/Journey_CSV")
+# setwd("/Users/roshanak/Dropbox/UTK/Fall2016/STAT576/HW3/Journey/Journey_CSV")
 cust = read.csv(file="transaction_data.csv", header=TRUE)
 demo = read.csv(file="demo_ToCategorical.csv", header=TRUE)
 
@@ -36,5 +38,14 @@ DF$TRANS_TIME_Cat <- cut(DF$TRANS_TIME,
                      labels=c("morning","afternoon","evening"))
 write.csv(DF,file="DF.csv")
 ```
+The above chunk creates the final .CSV file that creates our datafrom of interest. All of our analysis will be performed on DF.csv.
 
+```{r}
+DF = read.csv("DF.csv")
+head(DF)
+```
 
+## Necessary Libraries
+```{r}
+
+```
