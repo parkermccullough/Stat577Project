@@ -25,6 +25,7 @@ demo = read.csv(file="demo_ToCategorical.csv", header=TRUE)
 head(cust)
 summary(cust)
 
+library(sqldf)
 stmt <- "SELECT household_key,DAY,STORE_ID,RETAIL_DISC,TRANS_TIME,WEEK_NO,COUPON_DISC,
 COUPON_MATCH_DISC,
 sum(SALES_VALUE) AS TotalValue
@@ -38,7 +39,7 @@ DF$TRANS_TIME_Cat <- cut(DF$TRANS_TIME,
                      labels=c("morning","afternoon","evening"))
 write.csv(DF,file="DF.csv")
 ```
-The above chunk creates the final .CSV file that creates our datafrom of interest. All of our analysis will be performed on DF.csv.
+The above chunk creates the final .CSV file that creates our data from of interest. All of our analysis will be performed on DF.csv.
 
 ```{r}
 DF = read.csv("DF.csv")
