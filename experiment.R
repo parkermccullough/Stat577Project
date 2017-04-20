@@ -3,6 +3,16 @@
 
 ############### SQL DF creation
 # Preliminaries
+
+# Load libraries
+library(sqldf)
+library(MASS)
+library(class)
+library(MASS)
+library(tree)
+require(randomForest)
+library(gbm)
+
 # First step is to create the necessary DF we need for analysis
 # Data was preprocessed using python with Pandas library, see code/.py
 # Load the data from CSV files, Change to absolute path of data
@@ -13,7 +23,6 @@ cust = read.csv(file="transaction_data.csv", header=TRUE)
 demo = read.csv(file="demo_ToCategorical.csv", header=TRUE)
 
 
-library(sqldf)
 stmt <- "SELECT household_key,DAY,STORE_ID,RETAIL_DISC,TRANS_TIME,
 WEEK_NO,SALES_VALUE
 FROM cust
