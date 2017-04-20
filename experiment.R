@@ -26,7 +26,7 @@ demo = read.csv(file="demo_ToCategorical.csv", header=TRUE)
 stmt <- "SELECT household_key,DAY,STORE_ID,RETAIL_DISC,TRANS_TIME,
 WEEK_NO,SALES_VALUE
 FROM cust
-GROUP BY household_key"
+GROUP BY household_key" #INCORRECT
 trans1 <- sqldf(stmt)
 
 DF = merge(demo, trans1,by="household_key")
