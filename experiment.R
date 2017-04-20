@@ -15,5 +15,5 @@ DF = read.csv("DF.csv")
 summary(DF)
 head(DF)
 
-# Start Analysis
-
+# Start Analysis 
+# See homework 4 for best place to start.
