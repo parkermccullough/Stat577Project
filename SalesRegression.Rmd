@@ -16,16 +16,26 @@ output: html_notebook
 
 ```{r}
 # Preliminaries
+
+# Load Libraries
+library(sqldf)
+library(corrplot)
+library(MASS)
+library(class)
+library(MASS)
+library(tree)
+require(randomForest)
+library(gbm)
+
 # Data was preprocessed using python with Pandas library, see code/.py
+
+###IMPORTANT: MAKE SURE TO BE IN data/ directory
 # Load the data from CSV files, Change to absolute path of data
+
 # setwd("/Users/roshanak/Dropbox/UTK/Fall2016/STAT576/HW3/Journey/Journey_CSV")
 cust = read.csv(file="transaction_data.csv", header=TRUE)
 demo = read.csv(file="demo_ToCategorical.csv", header=TRUE)
 
-head(cust)
-summary(cust)
-
-library(sqldf)
 stmt <- "SELECT household_key,DAY,STORE_ID,RETAIL_DISC,TRANS_TIME,WEEK_NO,COUPON_DISC,
 COUPON_MATCH_DISC,
 sum(SALES_VALUE) AS TotalValue
@@ -33,20 +43,56 @@ FROM cust
 GROUP BY household_key"
 trans1 <- sqldf(stmt)
 
-DF = merge(demo, trans1, ,by="household_key")
+DF = merge(demo, trans1,by="household_key")
+write.csv(DF,file="data/DF.csv")
+```
+
+```{r}
+# Check for correlation
+DF$household_key = as.numeric(DF$household_key)
+DF$AGE_DESC = as.numeric(DF$AGE_DESC)
+DF$MARITAL_STATUS_CODE = as.numeric(DF$MARITAL_STATUS_CODE)
+DF$INCOME_DESC = as.numeric(DF$INCOME_DESC)
+DF$HOMEOWNER_DESC = as.numeric(DF$HOMEOWNER_DESC)
+DF$HH_COMP_DESC = as.numeric(DF$HH_COMP_DESC)
+DF$HOUSEHOLD_SIZE_DESC = as.numeric(DF$HOUSEHOLD_SIZE_DESC)
+DF$KID_CATEGORY_DESC = as.numeric(DF$KID_CATEGORY_DESC)
+DF$DAY = as.numeric(DF$DAY)
+DF$STORE_ID = as.numeric(DF$STORE_ID)
+DF$RETAIL_DISC = as.numeric(DF$RETAIL_DISC)
+DF$TRANS_TIME = as.numeric(DF$TRANS_TIME)
+DF$WEEK_NO = as.numeric(DF$WEEK_NO)
+M = cor(DF)
+corrplot(M,method="circle")
+```
+INSERT ANALYSIS HERE
+
+```{r}
+DF = merge(demo, trans1,by="household_key")
 DF$TRANS_TIME_Cat <- cut(DF$TRANS_TIME,
                      breaks=c(56, 1200, 1201, 2354),
                      labels=c("morning","afternoon","evening"))
-write.csv(DF,file="DF.csv")
+DF$TRANS_TIME=NULL
+
+DF = na.omit(DF)
+
+names = c('AGE_DESC','MARITAL_STATUS_CODE','INCOME_DESC',
+          'HOMEOWNER_DESC','HH_COMP_DESC','HOUSEHOLD_SIZE_DESC',
+          'KID_CATEGORY_DESC','DAY','STORE_ID','WEEK_NO',
+          'TRANS_TIME_Cat')
+DF[,names] = lapply(DF[,names],factor)
+
+write.csv(DF,file="data/DF.csv")
 ```
 The above chunk creates the final .CSV file that creates our data from of interest. All of our analysis will be performed on DF.csv.
 
 ```{r}
-DF = read.csv("DF.csv")
+## START HERE NORMALLY
+DF = read.csv("data/DF.csv")
+summary(DF)
 head(DF)
 ```
 
-## Necessary Libraries
 ```{r}
 
 ```
