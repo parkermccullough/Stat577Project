@@ -2,3 +2,5 @@ Icon?
 *.html
 *.md
 /data/
+.RData
+.Rhistory
