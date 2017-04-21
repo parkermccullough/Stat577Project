@@ -102,10 +102,10 @@ str(DF)
 M = cor(DF)
 corrplot(M, method = "circle")
 
+DF = DF[, c(1:9, 16)]
 
-
-YY = as.numeric(DF[,16]); YY = YY - mean(YY)  # center the response
-XX = as.matrix(DF[,-16]); XX = scale(XX,center=T,scale=T) # center the predictors
+YY = as.numeric(DF[,10]); YY = YY - mean(YY) # center the response
+XX = as.matrix(DF[,-10]); XX = scale(XX,center=T,scale=T) # center the predictors
 n = nrow(XX)
 rep = 20
 mse.train.lm = mse.train.bs = mse.train.f = mse.train.b = mse.train.l = mse.train.r = mse.train.en = mse.train.pcr = mse.train.pls = rep(0,rep)
@@ -127,19 +127,19 @@ for(i in 1:rep)
   # LM
   lm.fit = lm(Y~., data = train_data) #
   pred.train.lm = predict(lm.fit)
-  pred.test.lm = predict(lm.fit,newdata = test_data[,-17])
-  mse.train.lm[i] = sum((Y - pred.train.lm)^2)/length(Y)
-  mse.test.lm[i] = sum((Y_test - pred.test.lm)^2)/length(Y_test)
+  pred.test.lm = predict(lm.fit,newdata = test_data[,-10])
+  mse.train.lm[i] = sqrt(sum((Y - pred.train.lm)^2)/length(Y))
+  mse.test.lm[i] = sqrt(sum((Y_test - pred.test.lm)^2)/length(Y_test))
   
   #Best Subset
-  fitbsub = regsubsets(x=X,y=Y,nbest = 1, nvmax = 16)
+  fitbsub = regsubsets(x=X,y=Y,nbest = 1, nvmax = 10)
   rs = summary(fitbsub)
   plot(rs$bic, xlab="Parameter", ylab="BIC",type = 'l')
-  bs.fit = lm(Y ~ INCOME_DESC+HH_COMP_DESC+DAY+WEEK_NO,data=train_data )#!!!!!!!
+  bs.fit = lm(Y ~ INCOME_DESC+HH_COMP_DESC+DAY,data=train_data )#!!!!!!!
   pred.train.bs = predict(bs.fit)
-  pred.test.bs = predict(bs.fit,newdata = test_data[,c(4,6,9,13)])#!!!!!!!
-  mse.train.bs[i] = sum((Y - pred.train.bs)^2)/length(Y)
-  mse.test.bs[i] = sum((Y_test - pred.test.bs)^2)/length(Y_test)
+  pred.test.bs = predict(bs.fit,newdata = test_data[,c(4,6,9)])#!!!!!!!
+  mse.train.bs[i] = sqrt(sum((Y - pred.train.bs)^2)/length(Y))
+  mse.test.bs[i] = sqrt(sum((Y_test - pred.test.bs)^2)/length(Y_test))
   
   # forward step-wise
   #fitf0 = lm(Y~1,data=train_data) # fit the model with only the intercept
@@ -153,44 +153,44 @@ for(i in 1:rep)
   fitb0 = lm(Y~.,data=train_data)
   fitb = stepAIC(fitb0,direction="backward",data=DF,k=log(nrow(DF)),trace=FALSE)
   pred.train.b  = predict(fitb)
-  pred.test.b = predict(fitb,newdata = test_data[,-17])
-  mse.train.b[i] = sum((Y - pred.train.b)^2)/length(Y)
-  mse.test.b[i] = sum((Y_test - pred.test.b)^2)/length(Y_test)
+  pred.test.b = predict(fitb,newdata = test_data[,-10])
+  mse.train.b[i] = sqrt(sum((Y - pred.train.b)^2)/length(Y))
+  mse.test.b[i] = sqrt(sum((Y_test - pred.test.b)^2)/length(Y_test))
   
   #lasso
   cvfitl = cv.glmnet(x=X,y=Y,family="gaussian",alpha=1,standardize=FALSE)
   pred.train.l = predict(cvfitl, newx = X, s = "lambda.min") 
   pred.test.l = predict(cvfitl, newx = X_test, s = "lambda.min") 
-  mse.train.l[i] = sum((Y - pred.train.l)^2)/length(Y)
-  mse.test.l[i] = sum((Y_test - pred.test.l)^2)/length(Y_test)
+  mse.train.l[i] = sqrt(sum((Y - pred.train.l)^2)/length(Y))
+  mse.test.l[i] = sqrt(sum((Y_test - pred.test.l)^2)/length(Y_test))
   
   # Ridge
   cvfitr = cv.glmnet(x=X,y=Y,family="gaussian",alpha=0,standardize=FALSE)
   pred.train.r = predict(cvfitr, newx = X, s = "lambda.min") 
   pred.test.r = predict(cvfitr, newx = X_test, s = "lambda.min") 
-  mse.train.r[i] = sum((Y - pred.train.r)^2)/length(Y)
-  mse.test.r[i] = sum((Y_test - pred.test.r)^2)/length(Y_test)
+  mse.train.r[i] = sqrt(sum((Y - pred.train.r)^2)/length(Y))
+  mse.test.r[i] = sqrt(sum((Y_test - pred.test.r)^2)/length(Y_test))
   
   # E - net
   cvfiten = cv.glmnet(x=X,y=Y,family="gaussian",alpha=0.5,standardize=FALSE)
   pred.train.en = predict(cvfiten, newx = X, s = "lambda.min") 
   pred.test.en = predict(cvfiten, newx = X_test, s = "lambda.min") 
-  mse.train.en[i] = sum((Y - pred.train.en)^2)/length(Y)
-  mse.test.en[i] = sum((Y_test - pred.test.en)^2)/length(Y_test)
+  mse.train.en[i] = sqrt(sum((Y - pred.train.en)^2)/length(Y))
+  mse.test.en[i] = sqrt(sum((Y_test - pred.test.en)^2)/length(Y_test))
   
   # PC regression 
   pcr.fit=pcr(Y~X,scale=TRUE,ncomp = 5)
   pred.train.pcr = predict(pcr.fit, ncomp = 5, newdata = X)
   pred.test.pcr = predict(pcr.fit, ncomp = 5, newdata = X_test)
-  mse.train.pcr[i] = sum((Y - pred.train.pcr)^2)/length(Y)
-  mse.test.pcr[i] = sum((Y_test - pred.test.pcr)^2)/length(Y_test)
+  mse.train.pcr[i] = sqrt(sum((Y - pred.train.pcr)^2)/length(Y))
+  mse.test.pcr[i] = sqrt(sum((Y_test - pred.test.pcr)^2)/length(Y_test))
   
   # PLS regression
   pls.fit=plsr(Y~X,scale=TRUE,ncomp = 5)
   pred.train.pls = predict(pls.fit, ncomp = 5, newdata = X)
   pred.test.pls = predict(pls.fit, ncomp = 5, newdata = X_test)
-  mse.train.pls[i] = sum((Y - pred.train.pls)^2)/length(Y)
-  mse.test.pls[i] = sum((Y_test - pred.test.pls)^2)/length(Y_test)
+  mse.train.pls[i] = sqrt(sum((Y - pred.train.pls)^2)/length(Y))
+  mse.test.pls[i] = sqrt(sum((Y_test - pred.test.pls)^2)/length(Y_test))
 }
 
 mse.train = c(mse.train.lm,mse.train.bs, mse.train.b, mse.train.l,mse.train.r,mse.train.en,
@@ -199,26 +199,35 @@ mse.test = c(mse.test.lm, mse.test.bs, mse.test.b, mse.test.l, mse.test.r, mse.t
              mse.test.pcr, mse.test.pls)
 indicator = c(rep("LM",rep),rep("BS",rep),rep("BackWard",rep),rep("Lasso",rep),rep("Ridge",rep),
               rep("ENET",rep),rep("PCR",rep),rep("PLSR",rep))
-boxplot(mse.train~as.factor(indicator),main="Training MSE",ylab="MSE")
-boxplot(mse.test~as.factor(indicator),main="Test MSE",ylab="MSE")
+par(mfrow=c(1,2))
+colours <- c("red", "orange", "blue", "yellow", "green", "hotpink", "brown","purple")
+boxplot(mse.train~as.factor(indicator),main="Training RMSE",ylab="RMSE", las=2, col=colours)
+boxplot(mse.test~as.factor(indicator),main="Test RMSE",ylab="RMSE", las=2, col=colours)
+#-------------------------------------------------------------------------
+# Boosting
+#-------------------------------------------------------------------------
+errmat = matrix(0,20,2)
+for(i in 1:20)
+{
+DF.tr = data.frame(Y,DF[train_index,-10])
+bs.DF=gbm(Y~.,data=DF.tr,distribution="gaussian",n.trees=5000,interaction.depth=4)
+summary(bs.DF)
 
-# How do we know the methods are doing well?
-# lets look at the scatter plots of the test predicted values and the actual values
+yhat.boost=predict(bs.DF,newdata=test_data,n.trees=5000)
+sqrt(mean((yhat.boost-Y_test)^2)) # MSE
+#bs.DF=gbm(Y~.,data=DF.tr,distribution="gaussian",n.trees=5000,interaction.depth=4,shrinkage=0.2,verbose=F)
+#yhat.boost=predict(bs.DF,newdata=test_data,n.trees=5000)
+bs.tserr = sqrt(mean((yhat.boost-Y_test)^2)) # MSE
+bs.trerr = sqrt(mean((yhat.boost-Y)^2))
+bs.err = c(bs.trerr, bs.tserr)
 
-test_preds = as.data.frame(cbind(Y_test,pred.test.lm,pred.test.bs,pred.test.b,pred.test.l,pred.test.r
-                   ,pred.test.en, pred.test.pcr,pred.test.pls))
-names(test_preds)=c("Test Actual","LM Preds","BS Preds","Backward Preds",
-                    "Lasso Preds","Ridge Preds","ENET Preds","PCR Preds",
-                    "PLSR Preds")
-plot(test_preds,pch=16)
+errmat[i,] = c(bs.err) 
+}
 
-# Estimated Coefficient Vectors
-beta.lm = lm.fit$coefficients[-1]
-beta.r= coef(cvfitr, s = "lambda.min")[-1]
-beta.l = coef(cvfitl, s = "lambda.min")[-1]
-beta.en = coef(cvfiten, s = "lambda.min")[-1]
-
-coefs = cbind(beta.lm,beta.r,beta.l,beta.en)
+labels = as.factor(c(rep("BSTr",20),rep("BSTs",20)))
+err = c(errmat)
+par(mfrow=c(1,1))
+boxplot(err~labels,ylab="misclassification rate", las=2)
 ```
 
 
