@@ -32,10 +32,11 @@ DF$TRANS_TIME_Cat <- cut(DF$TRANS_TIME,
 write.csv(DF,file="DF.csv")
 
 head(DF)
-Y = as.numeric(DF[,16])
+Y = as.numeric(DF[,12])
 
 #Fit linear model using "lm"
 fit = lm(Y~.,data=DF)
+fit = lm(Y~AGE_DESC +MARITAL_STATUS_CODE+ INCOME_DESC+ HOMEOWNER_DESC+ HH_COMP_DESC+ HOUSEHOLD_SIZE_DESC+ KID_CATEGORY_DESC+ RETAIL_DISC+ TRANS_TIME+ COUPON_MATCH_DISC,data=DF)
 summary(fit)
 residuals = fit$residuals
 
@@ -88,7 +89,7 @@ DF$TRANS_TIME = as.numeric(DF$TRANS_TIME)
 DF$WEEK_NO = as.numeric(DF$WEEK_NO)
 DF$TRANS_TIME_Cat =  as.numeric(DF$TRANS_TIME_Cat)
 str(DF) 
-M = cor(DF)
+M = cor(DF[,-1])
 corrplot(M, method = "circle")
 
 DF = DF[, c(1:9, 16)]
@@ -106,37 +107,38 @@ set.seed(1)
 
 errTs.knn = errTs.lda = errTs.qda = errTs.lr = errTs.lasso = errTs.SVC = errTs.SVM = rep(0,20)
 
-#attach(heartt)
 set.seed(1)
 for(i in 1:20)
 {
-  train.index = sample(1:270,170,replace=FALSE)
-  xtrain = heartt[train.index,c(1,4,5,8,10,12)]
-  ytrain = heartt[train.index,14]
-  xtest = heartt[-train.index,c(1,4,5,8,10,12)]
-  ytest = heartt[-train.index,14]
-
+  train.index = sample(1:800,400,replace=FALSE)
+  xtrain = DF[train.index,c(-1)]
+  ytrain = DF[train.index,12]
+  xtest = DF[-train.index,c(-1)]
+  ytest = DF[-train.index,12]
+  testdat = data.frame (xtest , ytest)
+  testdat1 = testdat[-1,]
   #Linear SVMs (SVC)
   y=as.factor(ytrain)
   traindat1 = cbind(xtrain,y)
-  tune.out.SVC=tune(svm, y~ age+rbp+chol+hrate+oldpeak+majorV, data=traindat1,kernel="linear",
+  
+  tune.out.SVC=tune(svm, y~., data=traindat1,kernel="linear",
           ranges = list(cost=c(0.001,0.01,0.1,1,5,10,100)))
   bestmod.SVC = tune.out.SVC$best.model
-  pred.SVC =predict(bestmod.SVC, testdat)
+  pred.SVC =predict(bestmod.SVC, testdat[!rowSums(is.na(testdat)),])
+  
   
   errTs.SVC[i] = sum(ytest!=pred.SVC)/length(pred.SVC)
-  
+} 
 #Kernel SVMs - radial kernels
-  tune.out.svm=tune(svm,y ~ age+rbp+chol+hrate+oldpeak+majorV, data=traindat1,kernel="radial",
-              ranges =list(cost=c(0.001,0.005,0.0075,0.01,0.05,0.075,0.1,0.5,0.75,1,1.5,2,5,10,100),gamma = c(0.1,0.5,1,2,3,4)))
+  tune.out.svm=tune(svm,y ~., data=traindat1,kernel="radial",
+              ranges =list(cost=c(0.001,0.01,0.1,1,5,10,100),gamma = c(0.1,0.5,1,2,3,4)))
   bestmod.svm = tune.out.svm$best.model
   pred.SVM =predict(bestmod.svm, testdat) 
   errTs.SVM[i] = sum(ytest!=pred.SVM)/length(pred.SVM)
   }
 
-errTs = c(errTs.knn, errTs.lda, errTs.qda, errTs.lr, errTs.lasso, errTs.SVC, errTs.SVM)
-indicator = c(rep("knn",20),rep("LDA",20),rep("QDA",20),rep("LR",20),
-rep("Lasso",20),rep("Linear-SVM",20),rep("radial-SVM",20))
+errTs = c(errTs.SVC, errTs.SVM)
+indicator = c(rep("Linear-SVM",20),rep("radial-SVM",20))
 boxplot(errTs~as.factor(indicator),main="Part-a")
 
 
