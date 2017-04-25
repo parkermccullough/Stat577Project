@@ -1,0 +1,148 @@
+---
+title: "STAT 577 Project"
+output: html_notebook
+---
+
+# Predicting Sales Using Linear Regression
+## A Case Study
+### By
+## Roshanak Akram
+## Nooshin Hamidian
+## Parker McCullough
+## Varisara Tansakul
+### 20 April 2017
+
+```{r}
+#setwd("/Users/roshanak/Dropbox/UTK/Fall2016/STAT576/HW3/Journey/Journey_CSV")
+cust = read.csv("transaction_data.csv")
+demo = read.csv("hh_demographic.csv", header=TRUE)
+head(cust)
+library(sqldf)
+stmt <- "SELECT household_key,RETAIL_DISC,TRANS_TIME,
+COUPON_MATCH_DISC,
+sum(SALES_VALUE) AS TotalValue
+FROM cust
+GROUP BY household_key"
+trans1 <- sqldf(stmt)
+
+DF = merge(demo, trans1, ,by="household_key")
+DF$TRANS_TIME_Cat <- cut(DF$TRANS_TIME,
+                     breaks=c(56, 1200, 1201, 2354),
+                     labels=c("1","2","3"))
+write.csv(DF,file="DF.csv")
+
+head(DF)
+Y = as.numeric(DF[,12])
+
+#Fit linear model using "lm"
+fit = lm(Y~.,data=DF)
+fit = lm(Y~AGE_DESC +MARITAL_STATUS_CODE+ INCOME_DESC+ HOMEOWNER_DESC+ HH_COMP_DESC+ HOUSEHOLD_SIZE_DESC+ KID_CATEGORY_DESC+ RETAIL_DISC+ TRANS_TIME+ COUPON_MATCH_DISC,data=DF)
+summary(fit)
+residuals = fit$residuals
+
+#Test for Autocorrelated Errors
+durbinWatsonTest(fit)
+
+# variance inflation factor for collinearity
+vif(fit)
+sqrt(vif(fit)) > 3  # problem ( or may be even take value to be 2)
+
+# Non-constant error variance test
+ncvTest(fit)
+
+set.seed(100)
+train_index = sample(1:nrow(DF),0.5*nrow(DF)) 
+test_data_ols = DF[-train_index,] 
+
+# fitted models
+fit_ols = lm(TotalValue ~ .,data = DF[train_index,]) 
+
+# Obtain Predicted values
+train_pred_ols = fit_ols$fitted.values
+test_pred_ols = predict(fit_ols,newdata = test_data_ols) 
+
+# Compute MSEs
+train_mse_ols = mean((DF[train_index,16]-train_pred_ols)^2)
+test_mse_ols = mean((DF[-train_index,16]-test_pred_ols)^2)
+
+
+c(train_mse_ols) # print training errors
+c(test_mse_ols) # print training errors
+
+##Trying different methods:
+#prostate = read.csv("prostate.csv")
+#colnames(prostate) = c("lcavol","lweight","age","lbph","svi","lcp","gleason","pgg45","lpsa")
+#head(prostate)
+DF = na.omit(DF)
+DF$household_key = as.numeric(DF$household_key)
+DF$AGE_DESC = as.numeric(DF$AGE_DESC)
+DF$MARITAL_STATUS_CODE = as.numeric(DF$MARITAL_STATUS_CODE)
+DF$INCOME_DESC = as.numeric(DF$INCOME_DESC)
+DF$HOMEOWNER_DESC = as.numeric(DF$HOMEOWNER_DESC)
+DF$HH_COMP_DESC = as.numeric(DF$HH_COMP_DESC)
+DF$HOUSEHOLD_SIZE_DESC = as.numeric(DF$HOUSEHOLD_SIZE_DESC)
+DF$KID_CATEGORY_DESC = as.numeric(DF$KID_CATEGORY_DESC)
+DF$DAY = as.numeric(DF$DAY)
+DF$STORE_ID = as.numeric(DF$STORE_ID)
+DF$RETAIL_DISC = as.numeric(DF$RETAIL_DISC)
+DF$TRANS_TIME = as.numeric(DF$TRANS_TIME)
+DF$WEEK_NO = as.numeric(DF$WEEK_NO)
+DF$TRANS_TIME_Cat =  as.numeric(DF$TRANS_TIME_Cat)
+str(DF) 
+M = cor(DF)
+corrplot(M, method = "circle")
+
+DF = DF[, c(1:9, 16)]
+
+YY = as.numeric(DF[,10]); YY = YY - mean(YY) # center the response
+XX = as.matrix(DF[,-10]); XX = scale(XX,center=T,scale=T) # center the predictors
+n = nrow(XX)
+rep = 20
+mse.train.lm = mse.train.bs = mse.train.f = mse.train.b = mse.train.l = mse.train.r = mse.train.en = mse.train.pcr = mse.train.pls = rep(0,rep)
+mse.test.lm = mse.test.bs = mse.test.f = mse.test.b = mse.test.l = mse.test.r = mse.test.en =
+mse.test.pcr = mse.test.pls = rep(0,rep)
+
+# loop
+set.seed(1)
+
+errTs.knn = errTs.lda = errTs.qda = errTs.lr = errTs.lasso = errTs.SVC = errTs.SVM = rep(0,20)
+
+set.seed(1)
+for(i in 1:20)
+{
+  train.index = sample(1:800,400,replace=FALSE)
+  xtrain = DF[train.index,c(-1)]
+  ytrain = DF[train.index,12]
+  xtest = DF[-train.index,c(-1)]
+  ytest = DF[-train.index,12]
+  testdat = data.frame (xtest , ytest)
+  testdat1 = testdat[-1,]
+  #Linear SVMs (SVC)
+  y=as.factor(ytrain)
+  traindat1 = cbind(xtrain,y)
+  
+  tune.out.SVC=tune(svm, y~., data=traindat1,kernel="linear",
+          ranges = list(cost=c(0.001,0.01,0.1,1,5,10,100)))
+  bestmod.SVC = tune.out.SVC$best.model
+  pred.SVC =predict(bestmod.SVC, testdat[!rowSums(is.na(testdat)),])
+  
+  
+  errTs.SVC[i] = sum(ytest!=pred.SVC)/length(pred.SVC)
+} 
+#Kernel SVMs - radial kernels
+  tune.out.svm=tune(svm,y ~., data=traindat1,kernel="radial",
+              ranges =list(cost=c(0.001,0.01,0.1,1,5,10,100),gamma = c(0.1,0.5,1,2,3,4)))
+  bestmod.svm = tune.out.svm$best.model
+  pred.SVM =predict(bestmod.svm, testdat) 
+  errTs.SVM[i] = sum(ytest!=pred.SVM)/length(pred.SVM)
+  }
+
+errTs = c(errTs.SVC, errTs.SVM)
+indicator = c(rep("Linear-SVM",20),rep("radial-SVM",20))
+boxplot(errTs~as.factor(indicator),main="Part-a")
+
+
+
+```
+
+
