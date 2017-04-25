@@ -1,0 +1,135 @@
+---
+title: "STAT 577 Project"
+output: html_notebook
+---
+
+# Predicting Sales Using Linear Regression
+## A Case Study
+### By
+## Roshanak Akram
+## Nooshin Hamidian
+## Parker McCullough
+## Varisara Tansakul
+### 20 April 2017
+
+```{r}
+#setwd("/Users/roshanak/Dropbox/UTK/Fall2016/STAT576/HW3/Journey/Journey_CSV")
+cust = read.csv("transaction_data.csv")
+demo = read.csv("demo_ToCategorical.csv", header=TRUE)
+
+product = read.csv("product.csv")
+head(cust)
+library(sqldf)
+stmt <- "SELECT household_key,RETAIL_DISC,PRODUCT_ID, TRANS_TIME,
+COUPON_MATCH_DISC,
+sum(SALES_VALUE) AS TotalValue
+FROM cust
+GROUP BY household_key,PRODUCT_ID"
+trans1 <- sqldf(stmt)
+custdemo = merge(trans1, demo, by="household_key")
+
+
+head(dep)
+dep = merge(custdemo, product, ,by="PRODUCT_ID")
+
+library(sqldf)
+stmt1 <- "SELECT household_key,DEPARTMENT,TotalValue, TRANS_TIME
+FROM dep
+GROUP BY household_key,PRODUCT_ID"
+trans2 <- sqldf(stmt1)
+DF = merge(demo, trans1, ,by="household_key")
+trans2$TRANS_TIME_Cat <- cut(trans2$TRANS_TIME,
+                     breaks=c(56, 1200, 1201, 2354),
+                     labels=c("1","2","3"))
+write.csv(trans2,file="DF.csv")
+trans3 = trans2[,c(-4)]
+trans3$DEPARTMENT = as.numeric(trans3$DEPARTMENT)
+trans3 = na.omit(trans3)
+head(trans3)
+
+# determining k -- look at the total with-in ss and change in ss 
+set.seed(3)
+ss = rep(0,20)
+for(i in 1:20)
+{
+  km = kmeans(trans3[,-1],i,nstart=20)
+  ss[i] = km$tot.withinss
+}
+
+par(mfrow=c(1,2))
+plot(1:20,ss,xlab = "k",ylab="total with-in ss",type='l') # plot of k versus the total with-in ss
+ss_lag = ss[2:20]
+ss_diff = ss[1:19] - ss_lag
+plot(1:19,ss_diff,xlab = "k",ylab="reduction in total with-in ss",type='l') # plot of k versus the reduction in total with-in ss
+# K-means clustering
+set.seed(2)
+km.3 =kmeans(trans3[,-1],3,nstart=20)  # k-means with k=3
+trans3$TRANS_TIME_Cat = as.numeric(trans3$TRANS_TIME_Cat)
+km.3$cluster
+str(trans3)
+library(scatterplot3d)
+scatterplot3d(trans3[,1],trans3[,2],trans3[,3], pch = 20,col.grid = "lightblue",col.axis = "blue",
+              color=(km.3$cluster),xlab="pc-1",ylab="pc-2",zlab="pc-3")
+
+
+
+par(mfrow=c(2,2))
+plot(trans3[,2],trans3[,3],col=(km.3$cluster),pch=20,xlab="X-1",ylab="X-2",main="raw data")
+t(trans2[,1],trans2[,2],col=(km.3$cluster),pch=20,xlab="X-1",ylab="X-2",main="k-means results with k=3")
+
+summary(km.3)
+
+# Look at the output of kmeans fit
+set.seed(4)
+km = kmeans(data,1,nstart=20)
+km  # look at the output
+
+#----------------------------------------------------------
+# Hierarchical Clustering
+# the dist() function computes the euclidian distances among the n observations
+hc.complete=hclust(dist(data), method="complete")
+hc.average=hclust(dist(data), method="average")
+hc.single=hclust(dist(data), method="single")
+
+par(mfrow=c(1,3))
+plot(hc.complete,main="Complete Linkage", xlab="", sub="", cex=.9) # plot the dendrogram
+plot(hc.average, main="Average Linkage", xlab="", sub="", cex=.9)
+plot(hc.single, main="Single Linkage", xlab="", sub="", cex=.9)
+labels.complete = cutree(hc.complete, k=3)
+labels.average = cutree(hc.average, k=3)
+labels.single = cutree(hc.single, k=3)
+
+
+# PLOT the HC results
+par(mfrow=c(2,2))
+plot(data[,1],data[,2],col=as.numeric(y),pch=20,xlab="X-1",ylab="X-2",main="raw data with label")
+plot(data[,1],data[,2],col=(labels.complete),pch=20,xlab="X-1",ylab="X-2",main="HC Complete Linkage")
+plot(data[,1],data[,2],col=(labels.average),pch=20,xlab="X-1",ylab="X-2",main="HC Average Linkage")
+plot(data[,1],data[,2],col=(labels.single),pch=20,xlab="X-1",ylab="X-2",main="HC Single Linkage")
+
+#---------------------------------------------------------------
+# Determine the number of clusters
+# Again, one can look at the the change 
+# in within cluster sum of squares
+# note the uncertainty with the number of clusters
+
+library(GMD)
+ss = rep(0,20)
+for(i in 1:20)
+{
+  hc.complete = hclust(dist(data), method="complete")
+  hc.clusters.complete = cutree(hc.complete, k=i)
+  hc.res= css(dist.obj=dist(x), clusters=hc.clusters.complete)
+  ss[i] = hc.res$totwss
+}
+par(mfrow=c(1,2))
+plot(1:20,ss,xlab = "k",ylab="total with-in ss",type='l') # plot of k versus the total with-in ss
+ss_lag = ss[2:20]
+ss_diff = ss[1:19] - ss_lag
+plot(1:19,ss_diff,xlab = "k",ylab="reduction in total with-in ss",type='l') # plot of k versus the reduction in total with-in ss
+
+
+
+```
+
+
