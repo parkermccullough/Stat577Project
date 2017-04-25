@@ -6,7 +6,7 @@
 ## Nooshin Hamidian
 ## Parker McCullough
 ## Varisara Tansakul
-### 20 April 2017
+### 27 April 2017
 
 # Preliminaries
 
@@ -187,39 +187,61 @@ boxplot(mse.test~as.factor(indicator),main="Test RMSE",ylab="RMSE", las=2, col=c
 #-------------------------------------------------------------------------
 # Boosting
 #-------------------------------------------------------------------------
-errmat = matrix(0,20,2)
-for(i in 1:20)
+errmat = Err = ErrPercent = matrix(0,50,2)
+
+for(i in 1:50)
 {
-  DF.tr = data.frame(Y,DF[train_index,-10])
+  DF.tr = data.frame(Y,DF[train_index,-9])
   bs.DF=gbm(Y~.,data=DF.tr,distribution="gaussian",n.trees=5000,interaction.depth=4)
-  summary(bs.DF)
+  #summary(bs.DF)
   
-  yhat.boost=predict(bs.DF,newdata=test_data,n.trees=5000)
-  sqrt(mean((yhat.boost-Y_test)^2)) # MSE
+  yhat.boost=predict(bs.DF,newdata=test_data,n.trees=5000,interaction.depth=4)
+  yhat.boost.tr=predict(bs.DF, n.trees=5000,interaction.depth=4)
+  #sqrt(mean((yhat.boost-Y_test)^2)/length(Y_test)) # MSE
   #bs.DF=gbm(Y~.,data=DF.tr,distribution="gaussian",n.trees=5000,interaction.depth=4,shrinkage=0.2,verbose=F)
   #yhat.boost=predict(bs.DF,newdata=test_data,n.trees=5000)
-  bs.tserr = sqrt(mean((yhat.boost-Y_test)^2)) # MSE
-  bs.trerr = sqrt(mean((yhat.boost-Y)^2))
+  
+  MeanBoost_train = mean(yhat.boost.tr)
+  MeanBoost_test = mean(yhat.boost)
+  
+  bs.tserr = sqrt(sum((yhat.boost-Y_test)^2)/length(Y_test)) # MSE
+  bs.trerr = sqrt(sum((yhat.boost.tr-Y)^2)/length(Y))
   bs.err = c(bs.trerr, bs.tserr)
   
+  BS_train_Err = abs(MeanBoost_train - MeanY_train)
+  BS_train_ErrPercent = 100*abs(MeanBoost_train - MeanY_train)/MeanY_train
+  BS_test_Err = abs(MeanBoost_test - MeanY_test)
+  BS_test_ErrPercent = 100*abs(MeanBoost_test - MeanY_test)/MeanY_test
+  
+  BS_Err = c(BS_train_Err, BS_test_Err)
+  BS_ErrPercent = c(BS_train_ErrPercent, BS_test_ErrPercent)
+  
   errmat[i,] = c(bs.err) 
+  Err[i,] = c(BS_Err)
+  ErrPercent[i,] = c(BS_ErrPercent)
 }
 
-labels = as.factor(c(rep("BSTr",20),rep("BSTs",20)))
+labels = as.factor(c(rep("BSTr",50),rep("BSTs",50)))
 err = c(errmat)
+ErrPlot = c(Err)
+ErrPercentPlot = c(ErrPercent)
 par(mfrow=c(1,1))
-boxplot(err~labels,ylab="misclassification rate", las=2)
+boxplot(err~labels,ylab="RMSE Error $", las=2)
+boxplot(ErrPlot~labels,ylab="Error $", las=2)
+boxplot(ErrPercentPlot~labels,ylab="Error %", las=2)
 
 ######################
-# Bagging and Trees
+# Bagging, Random Forests and Trees
 ######################
 
 # Load Data
 DF = read.csv("data/DF_wo_outliers.csv")
 DF$X=NULL
 n = 20
-errmat = matrix(0,n,4)
+errmat = matrix(0,n,6)
 set.seed(2)
+
+RFfactor = tuneRF(DF[,-9], DF[,9], stepFactor = 6) # Tune RF
 
 for (i in 1:n){
   # Split data into Training and Test sample
@@ -235,6 +257,14 @@ for (i in 1:n){
   BagMean.test <- mean((test[,9] - pred)^2)
   Bag.err <- c(BagMean.train,BagMean.test)
   
+  # Random Forests
+  ForestMod = randomForest(TotalValue~.,data=train,mtry=2)
+  pred = predict(ForestMod,type = "response")
+  ForestMod.train = mean((train[,9]-pred)^2)
+  pred = predict(ForestMod,test[,1:8],type="response")
+  ForestMod.test = mean((test[,9]-pred)^2)
+  Forest.err = c(ForestMod.train,ForestMod.test)
+  
   # Trees
   tree.boston=tree(TotalValue ~ ., data=train)
   cv.boston = cv.tree(tree.boston)
@@ -246,11 +276,13 @@ for (i in 1:n){
   trees.err <- c(trees.err.train,trees.err.test)
   
   
-  errmat[i,] = c(Bag.err, trees.err)
+  errmat[i,] = c(Bag.err, Forest.err, trees.err)
 }
 
 # plots
 labels = c(rep("BagTraining",n), rep("BagTesting",n),
+           rep("Random Forest Training",n), rep("Random Forest Testing",n),
            rep("TreesTraining",n), rep("TreesTesting",n))
+
 err = sqrt(c(errmat))
 boxplot(err~labels,ylab="Misclassification Rate")
