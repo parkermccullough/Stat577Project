@@ -17,6 +17,7 @@ library(MASS)
 library(glmnet)
 library(class)
 library(leaps)
+library(pls)
 library(MASS)
 library(tree)
 require(randomForest)
@@ -238,8 +239,11 @@ boxplot(ErrPercentPlot~labels,ylab="Error %", las=2)
 DF = read.csv("data/DF_wo_outliers.csv")
 DF$X=NULL
 n = 20
-errmat = matrix(0,n,6)
+errmat = Err = ErrPercent = matrix(0,20,6)
 set.seed(2)
+
+YY = as.numeric(DF[,9]); YY = YY - mean(YY) # center the response
+XX = as.matrix(DF[,-9]); XX = scale(XX,center=T,scale=T) # center the predictors
 
 RFfactor = tuneRF(DF[,-9], DF[,9], stepFactor = 6) # Tune RF
 
@@ -249,25 +253,51 @@ for (i in 1:n){
   test <- DF[-trainIndex,]
   train <- DF[trainIndex,]
   
+  MeanY_train = mean(train[,9])
+  MeanY_test = mean(test[,9])
+  
   # Bagging
   BagMod <- randomForest(TotalValue~.,data=train,mtry=8)
-  pred <- predict(BagMod,type = "response")
-  BagMean.train <- mean((train[,9] - pred)^2)
-  pred <- predict(BagMod,test[,1:8],type="response")
-  BagMean.test <- mean((test[,9] - pred)^2)
+  predTr <- predict(BagMod,type = "response")
+  BagMean.train <- mean((train[,9] - predTr)^2)
+  predT <- predict(BagMod,test[,1:8],type="response")
+  BagMean.test <- mean((test[,9] - predT)^2)
   Bag.err <- c(BagMean.train,BagMean.test)
+  
+  # Error Percent
+  MeanBag_train = mean(predTr)
+  MeanBag_test = mean(predT)
+  BagTrainPercent = 100*abs(MeanBag_train-MeanY_train)/MeanY_train
+  BagTestPercent = 100*abs(MeanBag_test - MeanY_test)/MeanY_test
+  Bag_ErrPercent = c(BagTrainPercent,BagTestPercent)
+  
+  # Err in $
+  Bag_train_Err = abs(MeanBag_train - MeanY_train)
+  Bag_test_Err = abs(MeanBag_test - MeanY_test)
+  Bag_err = c(Bag_train_Err,Bag_test_Err)
   
   # Random Forests
   ForestMod = randomForest(TotalValue~.,data=train,mtry=2)
-  pred = predict(ForestMod,type = "response")
-  ForestMod.train = mean((train[,9]-pred)^2)
-  pred = predict(ForestMod,test[,1:8],type="response")
-  ForestMod.test = mean((test[,9]-pred)^2)
+  predTr = predict(ForestMod,type = "response")
+  ForestMod.train = mean((train[,9]-predTr)^2)
+  predT = predict(ForestMod,test[,1:8],type="response")
+  ForestMod.test = mean((test[,9]-predT)^2)
   Forest.err = c(ForestMod.train,ForestMod.test)
+  
+  # Error Percent
+  MeanRF_train = mean(predTr)
+  MeanRF_test = mean(predT)
+  rfTrainPercent = 100*abs(MeanRF_train-MeanY_train)/MeanY_train
+  rfTestPercent = 100*abs(MeanRF_test - MeanY_test)/MeanY_test
+  RF_ErrPercent = c(rfTrainPercent,rfTestPercent)
+  
+  # Err in $
+  RF_train_Err = abs(MeanRF_train - MeanY_train)
+  RF_test_Err = abs(MeanRF_test - MeanY_test)
+  RF_err = c(RF_train_Err,RF_test_Err)
   
   # Trees
   tree.boston=tree(TotalValue ~ ., data=train)
-  cv.boston = cv.tree(tree.boston)
   prune.boston = prune.tree(tree.boston)
   trees.pred.train = predict(tree.boston)
   trees.err.train = mean((train[,9] - trees.pred.train)^2)
@@ -275,8 +305,21 @@ for (i in 1:n){
   trees.err.test <- mean((test[,9] - trees.pred.test)^2)
   trees.err <- c(trees.err.train,trees.err.test)
   
+  # Error Percent
+  MeanTree_train = mean(trees.pred.train)
+  MeanTree_test = mean(trees.pred.test)
+  TreeTrainPercent = 100*abs(MeanTree_train-MeanY_train)/MeanY_train
+  TreeTestPercent = 100*abs(MeanTree_test - MeanY_test)/MeanY_test
+  Tree_ErrPercent = c(TreeTrainPercent,TreeTestPercent)
+  
+  # Err in $
+  Tree_train_Err = abs(MeanTree_train - MeanY_train)
+  Tree_test_Err = abs(MeanTree_test - MeanY_test)
+  Tree_err = c(Tree_train_Err,Tree_test_Err)
   
   errmat[i,] = c(Bag.err, Forest.err, trees.err)
+  ErrPercent[i,] = c(Bag_ErrPercent,RF_ErrPercent,Tree_ErrPercent)
+  Err[i,] = c(Bag_err,RF_err,Tree_err)
 }
 
 # plots
@@ -284,5 +327,15 @@ labels = c(rep("BagTraining",n), rep("BagTesting",n),
            rep("Random Forest Training",n), rep("Random Forest Testing",n),
            rep("TreesTraining",n), rep("TreesTesting",n))
 
-err = sqrt(c(errmat))
-boxplot(err~labels,ylab="Misclassification Rate")
+RMSE = sqrt(c(errmat))
+err = c(errmat)
+ErrPlot = c(Err)
+ErrPercentPlot = c(ErrPercent)
+par(mfrow=c(1,3))
+colours <- c("red", "orange", "blue", "yellow", "green", "hotpink")
+boxplot(RMSE~labels,main="Training and Testing RMSE",
+        ylab="RMSE",las=2,col=colours)
+boxplot(ErrPlot~labels,ylab="Error $", main="Error in Dollars",
+        las=2,col=colours)
+boxplot(ErrPercentPlot~labels,ylab="Error %", main="Error in Percent",
+        las=2,col=colours)
